@@ -8,14 +8,14 @@ Pod::Spec.new do |s|
     Includes base classes for push/present/panModal navigation flows.
   DESC
 
-  s.homepage         = 'https://gitlab.id.vin'
+  s.homepage         = 'https://github.com/97longphan/LCoordinator'
   s.license          = { :type => 'MIT' }
   s.author           = { 'LONGPHAN' => 'longphan@vinid.net' }
   s.platform         = :ios, '14.0'
   s.swift_version    = '5.9'
 
   # For local development: path-based. Switch to git source when publishing.
-  s.source           = { :git => '', :tag => s.version.to_s }
+  s.source           = { :git => 'https://github.com/97longphan/LCoordinator.git', :tag => s.version.to_s }
 
   s.source_files     = 'Sources/LCoordinator/**/*.swift'
 
