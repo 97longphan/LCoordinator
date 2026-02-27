@@ -1,30 +1,52 @@
-# Coordinator Architecture Documentation
+# LCoordinator - iOS Navigation & Coordination SDK
+
+A clean, powerful Coordinator + Router + Deeplink SDK for iOS apps with support for push/present/panModal navigation flows.
 
 ## Table of Contents
 1. [Overview](#overview)
-2. [Core Components](#core-components)
-3. [Data Flow & Communication](#data-flow--communication)
-4. [Navigation System](#navigation-system)
-5. [Advanced Patterns](#advanced-patterns)
-6. [Memory Management](#memory-management)
-7. [Best Practices](#best-practices)
+2. [Installation](#installation)
+3. [Core Components](#core-components)
+4. [Data Flow & Communication](#data-flow--communication)
+5. [Navigation System](#navigation-system)
+6. [Advanced Patterns](#advanced-patterns)
+7. [Memory Management](#memory-management)
+8. [Best Practices](#best-practices)
 
 ---
 
 ## Overview
 
-### What is Coordinator Pattern?
+### What is the Coordinator Pattern?
 
-Coordinator pattern là một architectural pattern giúp tách biệt navigation logic khỏi ViewControllers. Trong project này, Coordinator đảm nhận vai trò điều phối flow giữa các màn hình, quản lý lifecycle của ViewControllers, và xử lý communication giữa các modules.
+The Coordinator pattern is an architectural pattern that separates navigation logic from ViewControllers. In this SDK, Coordinators manage the flow between screens, control the lifecycle of ViewControllers, and handle communication between modules.
 
-### Why Coordinators?
+### Why Use Coordinators?
 
 **Problems Solved:**
-- **ViewControllers không còn phải biết về navigation** → Reusable & Testable
-- **Centralized navigation logic** → Dễ maintain & debug
-- **Clear separation of concerns** → ViewModel chỉ handle business logic, Coordinator handle navigation
-- **Better deep linking support** → Có thể navigate từ bất kỳ đâu trong app
-- **Improved testability** → Mock coordinators để test flows
+- **ViewControllers don't need to know about navigation** → Reusable & Testable
+- **Centralized navigation logic** → Easy to maintain & debug
+- **Clear separation of concerns** → ViewModels handle business logic, Coordinators handle navigation
+- **Better deep linking support** → Navigate from anywhere in the app
+- **Improved testability** → Mock coordinators to test flows
+
+---
+
+## Installation
+
+### CocoaPods
+
+```ruby
+pod 'LCoordinator'
+```
+
+Then run:
+```bash
+pod install
+```
+
+### Requirements
+- iOS 14.0+
+- Swift 5.9+
 
 ---
 
@@ -43,18 +65,18 @@ protocol Coordinator: AnyObject {
 ```
 
 **Core Concepts:**
-- **Parent-Child Hierarchy:** Mỗi coordinator có thể có parent và nhiều children, tạo thành một tree structure
-- **`start()`:** Entry point để khởi động flow của coordinator
-- **`childDidFinish()`:** Cleanup method khi child coordinator hoàn thành và cần được remove
+- **Parent-Child Hierarchy:** Each coordinator can have a parent and multiple children, forming a tree structure
+- **`start()`:** Entry point to start the coordinator's flow
+- **`childDidFinish()`:** Cleanup method called when a child coordinator finishes and needs to be removed
 
-**Tree Structure:**
+**Example Hierarchy:**
 ```
 AppCoordinator (root)
-  ├─ MHStartupCoordinator
-  │   └─ MHPopupFlowCoordinator
-  └─ MHTabbarCoordinator
-      ├─ MHHomeCoordinator
-      │   ├─ MHHomeHeaderPluginCoordinator [embedded]
+  ├─ StartupCoordinator
+  │   └─ PopupFlowCoordinator
+  └─ TabbarCoordinator
+      ├─ HomeCoordinator
+      │   ├─ HomeHeaderPluginCoordinator [embedded]
       │   └─ DetailCoordinator [pushed]
       ├─ ProfileCoordinator
       └─ OrderCoordinator
@@ -71,18 +93,18 @@ protocol RouterCoordinator: Coordinator {
 ```
 
 **Presentation Styles:**
-- **`.push`** → Push vào navigation stack
-- **`.present(UIModalPresentationStyle)`** → Present modal với style (fullScreen, pageSheet, etc.)
-- **`.panModel`** → Present bottom sheet sử dụng PanModal
-- **`.none`** → No presentation (dành cho embedded coordinators như plugins)
+- **`.push`** → Push onto navigation stack
+- **`.present(UIModalPresentationStyle)`** → Present as modal with style (fullScreen, pageSheet, etc.)
+- **`.panModel`** → Present as bottom sheet using PanModal
+- **`.none`** → No presentation (for embedded coordinators like plugins)
 
 **Router vs ParentRouter:**
-- **`router`:** Router hiện tại của coordinator (có thể thay đổi khi present modal)
-- **`parentRouter`:** Lưu trữ router ban đầu, dùng để dismiss/pop về parent
+- **`router`:** Current router of the coordinator (can change when presenting modals)
+- **`parentRouter`:** Stores the original router, used to dismiss/pop back to parent
 
-**Flow when presenting modal:**
+**Modal Presentation Flow:**
 ```
-1. Before present: router === parentRouter (cùng instance)
+1. Before present: router === parentRouter (same instance)
 2. Create new NavigationController for modal
 3. Create new Router for modal's navigation stack
 4. parentRouter = router (save current)
@@ -92,7 +114,7 @@ protocol RouterCoordinator: Coordinator {
 
 ### 3. Base Coordinator Hierarchy
 
-Project có nhiều base classes phục vụ cho các use cases khác nhau:
+The SDK provides multiple base classes for different use cases:
 
 ```
 BaseCoordinator
@@ -104,25 +126,25 @@ BaseAppCoordinator<Factory: FlowFactory>
 ```
 
 **BaseCoordinator:**
-- Simplest form, chỉ implement Coordinator protocol
-- Use case: Non-router coordinators (như HomeStartupCoordinator - chỉ orchestrate flow, không present UI)
+- Simplest form, implements only the Coordinator protocol
+- Use case: Non-router coordinators (orchestrate flow without presenting UI)
 
 **BaseRouterCoordinator:**
-- Coordinator có router để navigate
-- Use case: Hầu hết các coordinators present UI (push/modal)
+- Coordinator with a router for navigation
+- Use case: Most coordinators that present UI (push/modal)
 
 **BaseContextCoordinator<Context>:**
-- Coordinator nhận context khi khởi tạo
-- Context chứa data cần thiết cho flow
-- Use case: Coordinator cần external data (user info, configuration, etc.)
+- Coordinator that receives context during initialization
+- Context contains necessary data for the flow
+- Use case: Coordinators that need external data (user info, configuration, etc.)
 
 **BaseRouterContextCoordinator<Context>:**
-- Combine cả Router và Context
-- Use case: Most common - coordinator cần navigation và data
+- Combines both Router and Context
+- Use case: Most common - coordinator needs both navigation and data
 
 **BaseAppCoordinator<Factory>:**
-- Root coordinator của app
-- Manage app-level flows thông qua FlowFactory
+- Root coordinator of the app
+- Manages app-level flows through FlowFactory
 - Responsible for switching major flows (onboarding → login → home)
 
 ### 4. Router & Navigation System
@@ -152,17 +174,17 @@ protocol RouterProtocol: AnyObject {
 **Key Features:**
 
 **1. Automatic Cleanup:**
-Router tự động track lifecycle của ViewControllers và cleanup coordinators khi:
-- User swipe back (gesture)
-- User tap back button
-- Modal dismissed by user
+Router automatically tracks the lifecycle of ViewControllers and cleans up coordinators when:
+- User swipes back (gesture)
+- User taps back button
+- Modal is dismissed by user
 
 **2. Callback Support:**
-- **`onNavigateBack`** (push): Called khi user quay lại từ pushed screen
-- **`onDismiss`** (present): Called khi modal dismissed
+- **`onNavigateBack`** (push): Called when user returns from a pushed screen
+- **`onDismiss`** (present): Called when a modal is dismissed
 
 **3. Context Tracking:**
-Router maintain internal dictionary mapping `Coordinator → RouterContext`:
+Router maintains an internal dictionary mapping `Coordinator → RouterContext`:
 ```swift
 private struct RouterContext {
     weak var viewController: UIViewController?
@@ -174,15 +196,15 @@ private struct RouterContext {
 
 ### 5. Context Pattern
 
-Context là struct chứa data/configuration cho coordinator:
+Context is a struct that holds data/configuration for a coordinator:
 
 ```swift
-struct MHStartupContext {
-    let sharedState: MHSharedStateStreaming
+struct StartupContext {
+    let sharedState: SharedStateStreaming
     let isFromDeeplink: Bool
 }
 
-final class MHStartupCoordinator: BaseRouterContextCoordinator<MHStartupContext> {
+final class StartupCoordinator: BaseRouterContextCoordinator<StartupContext> {
     override func start() {
         // Access context.sharedState, context.isFromDeeplink
     }
@@ -190,9 +212,9 @@ final class MHStartupCoordinator: BaseRouterContextCoordinator<MHStartupContext>
 ```
 
 **Benefits:**
-- **Type-safe data passing:** Compile-time check cho data requirements
-- **Clear dependencies:** Dễ thấy coordinator cần data gì
-- **Immutable by default:** Context thường là struct → thread-safe
+- **Type-safe data passing:** Compile-time checks for data requirements
+- **Clear dependencies:** Easy to see what data a coordinator needs
+- **Immutable by default:** Structs are thread-safe by design
 
 ### 6. FlowFactory & AppCoordinator
 
@@ -218,22 +240,22 @@ enum AppRoute: FlowRoute {
     case onboarding
     case loginInput
     case homeStartup
-    case mhStartup(MHStartupContext)
+    case startup(StartupContext)
 }
 
 func make(_ route: AppRoute, parent: Coordinator?) -> AppFlowBuildResult {
     switch route {
-    case .mhStartup(let context):
+    case .startup(let context):
         let nav = UINavigationController()
         let router = Router(navigationController: nav)
 
-        let startupCoordinator = MHStartupCoordinator(router: router, presentationStyle: .push, context: context)
-        let tabbarCoordinator = MHTabbarCoordinator(router: router, tabBarController: MHCustomTabBarController())
+        let startupCoordinator = StartupCoordinator(router: router, presentationStyle: .push, context: context)
+        let tabbarCoordinator = TabbarCoordinator(router: router, tabBarController: CustomTabBarController())
 
         return AppFlowBuildResult(
             rootViewController: nav,
             rootCoordinator: startupCoordinator,
-            childCoordinators: [tabbarCoordinator] // Tabbar được init sẵn nhưng chưa start
+            childCoordinators: [tabbarCoordinator]
         )
     }
 }
@@ -241,7 +263,7 @@ func make(_ route: AppRoute, parent: Coordinator?) -> AppFlowBuildResult {
 
 **Flow Setup in BaseAppCoordinator:**
 ```
-1. AppCoordinator.navigate(to: .mhStartup)
+1. AppCoordinator.navigate(to: .startup)
 2. Factory builds: rootVC + rootCoordinator + childCoordinators
 3. Setup hierarchy:
    - rootCoordinator.parentCoordinator = AppCoordinator
@@ -262,13 +284,13 @@ func make(_ route: AppRoute, parent: Coordinator?) -> AppFlowBuildResult {
 **Upward Communication (Child → Parent): Delegate Pattern**
 
 ```swift
-protocol MHLoginCoordinatorDelegate: AnyObject {
+protocol LoginCoordinatorDelegate: AnyObject {
     func didLoginSuccess()
     func didRequestRegister()
 }
 
-final class MHLoginCoordinator: BaseRouterCoordinator {
-    weak var delegate: MHLoginCoordinatorDelegate?
+final class LoginCoordinator: BaseRouterCoordinator {
+    weak var delegate: LoginCoordinatorDelegate?
 
     func handleSuccess() {
         delegate?.didLoginSuccess() // Notify parent
@@ -276,7 +298,7 @@ final class MHLoginCoordinator: BaseRouterCoordinator {
 }
 
 // Parent implements delegate
-extension AppCoordinator: MHLoginCoordinatorDelegate {
+extension AppCoordinator: LoginCoordinatorDelegate {
     func didLoginSuccess() {
         navigate(to: .home) // Parent decides what to do
     }
@@ -299,8 +321,8 @@ final class ParentCoordinator: BaseRouterCoordinator {
 
 **Via Shared State (Reactive):**
 ```swift
-protocol MHSharedStateStreaming {
-    var tabbarItems: Observable<[MHTabbarType]> { get }
+protocol SharedStateStreaming {
+    var tabbarItems: Observable<[TabbarType]> { get }
     var selectedStore: Observable<Store?> { get }
 }
 
@@ -317,19 +339,19 @@ sharedState.selectedStore
 
 **Via Global Delegates (Event Broadcasting):**
 ```swift
-protocol MHCreateStoreGlobalDelegate: AnyObject {
+protocol CreateStoreGlobalDelegate: AnyObject {
     func didFinishFlowCreateStoreFromHome()
 }
 
 // Any coordinator in tree can implement this
-extension MHStartupCoordinator: MHCreateStoreGlobalDelegate {
+extension StartupCoordinator: CreateStoreGlobalDelegate {
     func didFinishFlowCreateStoreFromHome() {
         // Handle event
     }
 }
 
 // Find ancestor implementing protocol
-if let handler = findAncestor(ofType: MHCreateStoreGlobalDelegate.self) {
+if let handler = findAncestor(ofType: CreateStoreGlobalDelegate.self) {
     handler.didFinishFlowCreateStoreFromHome()
 }
 ```
@@ -339,13 +361,13 @@ if let handler = findAncestor(ofType: MHCreateStoreGlobalDelegate.self) {
 **ViewModel → Coordinator: Delegate Pattern**
 
 ```swift
-protocol MHLoginViewModelDelegate: AnyObject {
-    func performLogin(with type: MHLoginStrategyType)
+protocol LoginViewModelDelegate: AnyObject {
+    func performLogin(with type: LoginStrategyType)
     func pushToRegister()
 }
 
-final class MHLoginViewModel {
-    weak var delegate: MHLoginViewModelDelegate?
+final class LoginViewModel {
+    weak var delegate: LoginViewModelDelegate?
 
     func handleLoginTapped() {
         // ViewModel doesn't know about navigation
@@ -353,8 +375,8 @@ final class MHLoginViewModel {
     }
 }
 
-final class MHLoginCoordinator: BaseRouterCoordinator {
-    private var viewModel: MHLoginViewModel!
+final class LoginCoordinator: BaseRouterCoordinator {
+    private var viewModel: LoginViewModel!
 
     override func start() {
         viewModel = builder.make(delegate: self)
@@ -362,13 +384,13 @@ final class MHLoginCoordinator: BaseRouterCoordinator {
     }
 }
 
-extension MHLoginCoordinator: MHLoginViewModelDelegate {
-    func performLogin(with type: MHLoginStrategyType) {
+extension LoginCoordinator: LoginViewModelDelegate {
+    func performLogin(with type: LoginStrategyType) {
         strategyFactory.getStrategy(for: type)?.perform(with: type)
     }
 
     func pushToRegister() {
-        let coordinator = MHRegisterCoordinator(router: router)
+        let coordinator = RegisterCoordinator(router: router)
         coordinator.parentCoordinator = self
         children.append(coordinator)
         coordinator.start()
@@ -377,8 +399,8 @@ extension MHLoginCoordinator: MHLoginViewModelDelegate {
 ```
 
 **Why ViewModel doesn't hold Coordinator reference:**
-- ViewModel should be testable without UI dependencies
-- ViewModel focuses on business logic, Coordinator focuses on navigation
+- ViewModels should be testable without UI dependencies
+- ViewModels focus on business logic, Coordinators focus on navigation
 - Clearer separation of concerns
 
 ### 4. Context Passing
@@ -397,7 +419,7 @@ let coordinator = DetailCoordinator(router: router, presentationStyle: .push, co
 
 **Mutable Shared State (Class with Reactive):**
 ```swift
-final class MHSharedState: MHSharedStateStreaming {
+final class SharedState: SharedStateStreaming {
     private let selectedStoreRelay = BehaviorRelay<Store?>(value: nil)
     var selectedStore: Observable<Store?> { selectedStoreRelay.asObservable() }
 
@@ -407,7 +429,7 @@ final class MHSharedState: MHSharedStateStreaming {
 }
 
 // Multiple coordinators share same instance
-let sharedState = MHSharedState()
+let sharedState = SharedState()
 let coordinator1 = Coordinator1(context: Context(sharedState: sharedState))
 let coordinator2 = Coordinator2(context: Context(sharedState: sharedState))
 ```
@@ -548,25 +570,25 @@ deeplinkCoordinator.start()
 
 ### 1. Strategy Pattern with Factory
 
-**Problem:** Coordinator có multiple strategies xử lý cùng một action (ví dụ: login có nhiều methods: password, biometric, OTP)
+**Problem:** Coordinator has multiple strategies for handling the same action (e.g., login with multiple methods: password, biometric, OTP)
 
-**Solution:** Factory tạo và cache strategy coordinators
+**Solution:** Factory creates and caches strategy coordinators
 
 **Architecture:**
 ```
-MHLoginCoordinator (orchestrator)
-  ├─ MHLoginStrategyFactory (factory)
-  │   ├─ MHLoginPasswordStrategyCoordinator (strategy 1)
-  │   └─ MHLoginBiometricStrategyCoordinator (strategy 2)
-  └─ MHHomePreparationCoordinator (next flow)
+LoginCoordinator (orchestrator)
+  ├─ LoginStrategyFactory (factory)
+  │   ├─ LoginPasswordStrategyCoordinator (strategy 1)
+  │   └─ LoginBiometricStrategyCoordinator (strategy 2)
+  └─ HomePreparationCoordinator (next flow)
 ```
 
 **Implementation Pattern:**
 
 ```swift
 // 1. Strategy Type Enum
-enum MHLoginStrategyType {
-    case password(MHLoginPasswordCredential)
+enum LoginStrategyType {
+    case password(LoginPasswordCredential)
     case biometric
 
     var cacheKey: String {
@@ -578,20 +600,20 @@ enum MHLoginStrategyType {
 }
 
 // 2. Factory Protocol
-protocol MHLoginStrategyFactory {
+protocol LoginStrategyFactory {
     func configure(router: RouterProtocol, parentCoordinator: BaseRouterCoordinator?,
-                   viewModelDelegate: MHLoginStrategyDelegate, addChild: @escaping (Coordinator) -> Void)
-    func preloadStrategies(_ types: [MHLoginStrategyType])
-    func getStrategy(for type: MHLoginStrategyType) -> MHLoginStrategyProtocol?
+                   viewModelDelegate: LoginStrategyDelegate, addChild: @escaping (Coordinator) -> Void)
+    func preloadStrategies(_ types: [LoginStrategyType])
+    func getStrategy(for type: LoginStrategyType) -> LoginStrategyProtocol?
 }
 
 // 3. Factory Implementation
-final class DefaultMHLoginStrategyFactory: MHLoginStrategyFactory {
-    private var cachedStrategies: [String: MHLoginStrategyProtocol] = [:]
+final class DefaultLoginStrategyFactory: LoginStrategyFactory {
+    private var cachedStrategies: [String: LoginStrategyProtocol] = [:]
     private weak var router: RouterProtocol?
     private weak var parentCoordinator: BaseRouterCoordinator?
 
-    func getStrategy(for type: MHLoginStrategyType) -> MHLoginStrategyProtocol? {
+    func getStrategy(for type: LoginStrategyType) -> LoginStrategyProtocol? {
         let key = type.cacheKey
         if let cached = cachedStrategies[key] { return cached }
 
@@ -603,8 +625,8 @@ final class DefaultMHLoginStrategyFactory: MHLoginStrategyFactory {
 }
 
 // 4. Usage in Coordinator
-final class MHLoginCoordinator: BaseRouterCoordinator {
-    @Injected var strategyFactory: MHLoginStrategyFactory
+final class LoginCoordinator: BaseRouterCoordinator {
+    @Injected var strategyFactory: LoginStrategyFactory
 
     override func start() {
         configureStrategyFactory()
@@ -623,35 +645,35 @@ final class MHLoginCoordinator: BaseRouterCoordinator {
     }
 }
 
-extension MHLoginCoordinator: MHLoginViewModelDelegate {
-    func performLogin(with type: MHLoginStrategyType) {
+extension LoginCoordinator: LoginViewModelDelegate {
+    func performLogin(with type: LoginStrategyType) {
         strategyFactory.getStrategy(for: type)?.perform(with: type)
     }
 }
 ```
 
 **Key Benefits:**
-- **Separation of concerns:** Main coordinator không handle strategy logic
-- **Lazy creation:** Strategy coordinators chỉ tạo khi cần
-- **Caching:** Reuse coordinators thay vì recreate
-- **Testability:** Mock factory để test different strategies
-- **Presentation style `.none`:** Strategy coordinators embedded, share parent's router
+- **Separation of concerns:** Main coordinator doesn't handle strategy logic
+- **Lazy creation:** Strategy coordinators only created when needed
+- **Caching:** Reuse coordinators instead of recreating
+- **Testability:** Mock factory to test different strategies
+- **Presentation style `.none`:** Strategy coordinators are embedded, share parent's router
 
 **When to Use:**
-- Có nhiều cách xử lý cùng một action
-- Strategies phức tạp, có own ViewModel và business logic
-- Muốn giảm gánh nặng cho main coordinator
+- Multiple ways to handle the same action
+- Strategies are complex with own ViewModel and business logic
+- Want to reduce main coordinator's responsibility
 
 ### 2. Popup Flow Coordinator
 
-**Problem:** Cần show multiple popups theo thứ tự (queue), mỗi popup phải dismiss trước khi show popup tiếp theo
+**Problem:** Need to show multiple popups in sequence, each popup must be dismissed before showing the next one
 
-**Solution:** MHPopupFlowCoordinator manages sequential popup queue
+**Solution:** PopupFlowCoordinator manages sequential popup queue
 
 **Architecture:**
 ```
-MHStartupCoordinator
-  └─ MHPopupFlowCoordinator (queue manager)
+StartupCoordinator
+  └─ PopupFlowCoordinator (queue manager)
       ├─ [Item 1: Notification Permission] → System popup
       ├─ [Item 2: Create Store] → Coordinator popup
       └─ [Item 3: Biometric Prompt] → Coordinator popup
@@ -668,7 +690,7 @@ MHStartupCoordinator
 
 **Implementation:**
 ```swift
-final class MHPopupFlowCoordinator<Item: PopupItem, Delegate: MHPopupFlowCoordinatorDelegate> {
+final class PopupFlowCoordinator<Item: PopupItem, Delegate: PopupFlowCoordinatorDelegate> {
     private var queue: [Item] = []
     private var currentPopup: Item?
 
@@ -704,8 +726,8 @@ final class MHPopupFlowCoordinator<Item: PopupItem, Delegate: MHPopupFlowCoordin
 
 **Delegate Wiring:**
 ```swift
-extension MHStartupCoordinator: MHPopupFlowCoordinatorDelegate {
-    func showPopup(_ item: MHStartupPopupItem, onDismiss: @escaping () -> Void) -> Coordinator? {
+extension StartupCoordinator: PopupFlowCoordinatorDelegate {
+    func showPopup(_ item: StartupPopupItem, onDismiss: @escaping () -> Void) -> Coordinator? {
         switch item {
         case .requestNotification:
             // System popup - no coordinator
@@ -718,7 +740,7 @@ extension MHStartupCoordinator: MHPopupFlowCoordinatorDelegate {
         }
     }
 
-    func popupClosed(_ item: MHStartupPopupItem) {
+    func popupClosed(_ item: StartupPopupItem) {
         // Analytics or cleanup
     }
 
@@ -732,18 +754,18 @@ extension MHStartupCoordinator: MHPopupFlowCoordinatorDelegate {
 - **Sequential execution:** Popups show one at a time
 - **Priority support:** Sort queue by priority
 - **Flexible popup types:** System popups (no coordinator) or custom popups (with coordinator)
-- **Clean separation:** Popup logic tách ra khỏi main coordinator
+- **Clean separation:** Popup logic separated from main coordinator
 
 ### 3. Popup Factory Pattern
 
-**Problem:** Coordinator có nhiều popup types cần show, mỗi popup có setup logic phức tạp và delegates
+**Problem:** Coordinator has multiple popup types to show, each popup has complex setup logic and delegates
 
-**Solution:** Factory encapsulates popup creation và delegate handling
+**Solution:** Factory encapsulates popup creation and delegate handling
 
 **Before Refactoring (Code in Coordinator):**
 ```swift
-final class MHStartupCoordinator {
-    private weak var actionPromptCoordinator: MHActionPromptBottomSheetCoordinator?
+final class StartupCoordinator {
+    private weak var actionPromptCoordinator: ActionPromptBottomSheetCoordinator?
 
     // ~100 lines popup creation code
     // Multiple delegate implementations
@@ -753,8 +775,8 @@ final class MHStartupCoordinator {
 
 **After Refactoring (Using Factory):**
 ```swift
-final class MHStartupCoordinator {
-    @Injected var popupFactory: MHStartupPopupFactory
+final class StartupCoordinator {
+    @Injected var popupFactory: StartupPopupFactory
 
     override func start() {
         configurePopupFactory()
@@ -772,8 +794,8 @@ final class MHStartupCoordinator {
     }
 }
 
-extension MHStartupCoordinator: MHPopupFlowCoordinatorDelegate {
-    func showPopup(_ item: MHStartupPopupItem, onDismiss: @escaping () -> Void) -> Coordinator? {
+extension StartupCoordinator: PopupFlowCoordinatorDelegate {
+    func showPopup(_ item: StartupPopupItem, onDismiss: @escaping () -> Void) -> Coordinator? {
         switch item {
         case .createStore(let type):
             return popupFactory.showActionPrompt(.init(type: type), onDismiss: onDismiss)
@@ -786,16 +808,16 @@ extension MHStartupCoordinator: MHPopupFlowCoordinatorDelegate {
 
 **Factory Implementation:**
 ```swift
-final class DefaultMHStartupPopupFactory: MHStartupPopupFactory {
+final class DefaultStartupPopupFactory: StartupPopupFactory {
     private weak var router: RouterProtocol?
-    private weak var delegate: MHStartupPopupFactoryDelegate?
+    private weak var delegate: StartupPopupFactoryDelegate?
     private var addChild: ((Coordinator) -> Void)?
 
-    private weak var actionPromptCoordinator: MHActionPromptBottomSheetCoordinator?
+    private weak var actionPromptCoordinator: ActionPromptBottomSheetCoordinator?
 
-    func showActionPrompt(_ context: MHActionPromptBottomSheetContext, onDismiss: @escaping () -> Void) -> Coordinator? {
-        let coordinator = MHActionPromptBottomSheetCoordinator(router: router, presentationStyle: .panModel, context: context)
-        coordinator.onMHPopupDismiss = onDismiss
+    func showActionPrompt(_ context: ActionPromptBottomSheetContext, onDismiss: @escaping () -> Void) -> Coordinator? {
+        let coordinator = ActionPromptBottomSheetCoordinator(router: router, presentationStyle: .panModel, context: context)
+        coordinator.onPopupDismiss = onDismiss
         coordinator.parentCoordinator = parentCoordinator
         coordinator.delegate = self
         addChild?(coordinator)
@@ -805,15 +827,15 @@ final class DefaultMHStartupPopupFactory: MHStartupPopupFactory {
     }
 
     func dismissActionPrompt() {
-        router?.dismiss(ofType: MHActionPromptBottomSheetCoordinator.self, isAnimated: true) {
+        router?.dismiss(ofType: ActionPromptBottomSheetCoordinator.self, isAnimated: true) {
             self.delegate?.reloadMasterData()
         }
     }
 }
 
 // Factory implements popup delegates
-extension DefaultMHStartupPopupFactory: MHActionPromptBottomSheetCoordinatorDelegate {
-    func handleAction(_ type: MHActionPromptItemType, action: MHActionPromptActionType) {
+extension DefaultStartupPopupFactory: ActionPromptBottomSheetCoordinatorDelegate {
+    func handleAction(_ type: ActionPromptItemType, action: ActionPromptActionType) {
         // Handle popup actions
         delegate?.purchaseSubscription()
     }
@@ -822,45 +844,45 @@ extension DefaultMHStartupPopupFactory: MHActionPromptBottomSheetCoordinatorDele
 
 **Key Benefits:**
 - **Reduced coordinator complexity:** ~100 lines code moved to factory
-- **Reusability:** Factory có thể reuse ở nhiều coordinators
-- **Testability:** Test popup logic độc lập
-- **Single Responsibility:** Factory chỉ handle popup, coordinator handle main flow
+- **Reusability:** Factory can be reused across multiple coordinators
+- **Testability:** Test popup logic independently
+- **Single Responsibility:** Factory handles popups, coordinator handles main flow
 
 ### 4. Plugin Coordinators (Embedded Components)
 
-**Problem:** Màn hình composite có nhiều sub-components (header, banner, report sections), mỗi component có own logic và ViewModel
+**Problem:** Composite screens have multiple sub-components (header, banner, report sections), each with its own logic and ViewModel
 
 **Solution:** Plugin coordinators with `.none` presentation style, share parent's router
 
 **Architecture:**
 ```
-MHHomeCoordinator [push, router: R1]
-  ├─ MHHomeHeaderPluginCoordinator [none, router: R1] ← Embedded
-  ├─ MHHomeBannerPluginCoordinator [none, router: R1] ← Embedded
-  ├─ MHHomeReportPluginCoordinator [none, router: R1] ← Embedded
+HomeCoordinator [push, router: R1]
+  ├─ HomeHeaderPluginCoordinator [none, router: R1] ← Embedded
+  ├─ HomeBannerPluginCoordinator [none, router: R1] ← Embedded
+  ├─ HomeReportPluginCoordinator [none, router: R1] ← Embedded
   └─ DetailCoordinator [push, router: R1] ← Navigation destination
 ```
 
 **Plugin Protocol:**
 ```swift
-protocol MHHomePluginCoordinator: BaseRouterContextCoordinator<MHHomePluginStreaming> {
-    var pluginId: MHHomePluginIdentifier { get }
+protocol HomePluginCoordinator: BaseRouterContextCoordinator<HomePluginStreaming> {
+    var pluginId: HomePluginIdentifier { get }
     var pluginViewController: UIViewController? { get }
-    var pluginDelegate: MHHomePluginDelegate? { get set }
+    var pluginDelegate: HomePluginDelegate? { get set }
 }
 ```
 
 **Plugin Implementation:**
 ```swift
-final class MHHomeHeaderPluginCoordinator: MHHomePluginCoordinator {
-    var pluginId: MHHomePluginIdentifier { .header }
+final class HomeHeaderPluginCoordinator: HomePluginCoordinator {
+    var pluginId: HomePluginIdentifier { .header }
     var pluginViewController: UIViewController? { viewController }
 
-    private var viewController: MHHomeHeaderPluginViewController!
+    private var viewController: HomeHeaderPluginViewController!
 
     override func start() {
         // Build ViewModel + ViewController
-        // NO perform() call - không present UI
+        // NO perform() call - doesn't present UI
         let result = builder.make(delegate: self)
         self.viewController = result.vc
     }
@@ -869,8 +891,8 @@ final class MHHomeHeaderPluginCoordinator: MHHomePluginCoordinator {
 
 **Parent Coordinator Usage:**
 ```swift
-final class MHHomeCoordinator: BaseRouterCoordinator {
-    private var pluginCoordinators: [MHHomePluginCoordinator] = []
+final class HomeCoordinator: BaseRouterCoordinator {
+    private var pluginCoordinators: [HomePluginCoordinator] = []
 
     override func start() {
         setupPlugins()
@@ -882,10 +904,10 @@ final class MHHomeCoordinator: BaseRouterCoordinator {
     }
 
     private func setupPlugins() {
-        let plugins: [MHHomePluginCoordinator] = [
-            MHHomeHeaderPluginCoordinator(router: router, presentationStyle: .none, context: context),
-            MHHomeBannerPluginCoordinator(router: router, presentationStyle: .none, context: context),
-            MHHomeReportPluginCoordinator(router: router, presentationStyle: .none, context: context)
+        let plugins: [HomePluginCoordinator] = [
+            HomeHeaderPluginCoordinator(router: router, presentationStyle: .none, context: context),
+            HomeBannerPluginCoordinator(router: router, presentationStyle: .none, context: context),
+            HomeReportPluginCoordinator(router: router, presentationStyle: .none, context: context)
         ]
 
         plugins.forEach { plugin in
@@ -903,20 +925,20 @@ final class MHHomeCoordinator: BaseRouterCoordinator {
 **Key Characteristics:**
 - **`.none` presentation:** No navigation action
 - **Shared router:** Use parent's router (same instance)
-- **Embedded UI:** VCs embedded trong parent VC's view hierarchy
-- **Independent logic:** Mỗi plugin có own ViewModel và business logic
-- **Skipped in deeplink traversal:** `deepestVisibleCoordinator` bỏ qua plugins
+- **Embedded UI:** ViewControllers embedded in parent VC's view hierarchy
+- **Independent logic:** Each plugin has its own ViewModel and business logic
+- **Skipped in deeplink traversal:** `deepestVisibleCoordinator` skips plugins
 
 **When to Use:**
-- Screen có nhiều independent sub-components
-- Mỗi component có complex logic đáng để tách ra coordinator riêng
-- Muốn reuse components ở nhiều screens
+- Screen has multiple independent sub-components
+- Each component has complex logic worth separating into its own coordinator
+- Want to reuse components across multiple screens
 
 ### 5. ActiveChildCoordinator (Container Coordinators)
 
-**Problem:** Container coordinators (Tabbar, Segment, PageView) có nhiều children nhưng chỉ 1 child visible tại một thời điểm
+**Problem:** Container coordinators (Tabbar, Segment, PageView) have multiple children but only 1 child is visible at a time
 
-**Solution:** ActiveChildCoordinator protocol để identify visible child
+**Solution:** ActiveChildCoordinator protocol to identify the visible child
 
 **Protocol:**
 ```swift
@@ -927,7 +949,7 @@ protocol ActiveChildCoordinator: Coordinator {
 
 **Tabbar Implementation:**
 ```swift
-final class MHTabbarCoordinator: BaseRouterCoordinator, ActiveChildCoordinator {
+final class TabbarCoordinator: BaseRouterCoordinator, ActiveChildCoordinator {
     private let tabBarController: UITabBarController
 
     var activeChildCoordinator: Coordinator? {
@@ -941,13 +963,13 @@ final class MHTabbarCoordinator: BaseRouterCoordinator, ActiveChildCoordinator {
     }
 
     private func setupTabs() {
-        for tab in MHTabbarType.allCases {
+        for tab in TabbarType.allCases {
             let (coordinator, viewController) = makeTab(for: tab)
             children.append(coordinator)
         }
     }
 
-    private func makeTab(for tab: MHTabbarType) -> (Coordinator, UIViewController) {
+    private func makeTab(for tab: TabbarType) -> (Coordinator, UIViewController) {
         // Create new nav controller and router for each tab
         let navigationController = UINavigationController()
         let router = Router(navigationController: navigationController)
@@ -965,7 +987,7 @@ final class MHTabbarCoordinator: BaseRouterCoordinator, ActiveChildCoordinator {
 ```
 User on Tab 2 → deepestVisibleCoordinator logic:
 
-1. Start at MHTabbarCoordinator
+1. Start at TabbarCoordinator
 2. Is ActiveChildCoordinator? Yes
 3. Check if something presented on top? No
 4. Return activeChildCoordinator (Tab 2's coordinator)
@@ -977,8 +999,8 @@ User on Tab 2 → deepestVisibleCoordinator logic:
 
 **Key Benefits:**
 - **Correct deep linking:** Always push from visible tab/segment
-- **Multiple independent flows:** Mỗi tab có own navigation stack
-- **Preserved state:** Switch tabs không reset state
+- **Multiple independent flows:** Each tab has its own navigation stack
+- **Preserved state:** Switching tabs doesn't reset state
 
 ---
 
@@ -987,13 +1009,13 @@ User on Tab 2 → deepestVisibleCoordinator logic:
 ### 1. Weak References
 
 **Critical weak references:**
-- **`parentCoordinator`:** Weak để tránh retain cycle (parent owns child)
-- **`delegate`:** Weak để tránh retain cycle (owner-delegate pattern)
-- **Factory dependencies:** Weak router, weak parentCoordinator trong factories
+- **`parentCoordinator`:** Weak to prevent retain cycle (parent owns child)
+- **`delegate`:** Weak to prevent retain cycle (owner-delegate pattern)
+- **Factory dependencies:** Weak router, weak parentCoordinator in factories
 
 **Strong references:**
-- **`children`:** Strong array để keep children alive
-- **`router`:** Strong để coordinator own router instance (modal case)
+- **`children`:** Strong array to keep children alive
+- **`router`:** Strong to give coordinator ownership of router instance (modal case)
 
 ### 2. Cleanup Flow
 
@@ -1029,7 +1051,7 @@ Child coordinator + modal nav controller deallocated
 
 ### 3. Router Context Tracking
 
-Router maintain internal dictionary tracking each coordinator:
+Router maintains an internal dictionary tracking each coordinator:
 ```swift
 private var coordinatorContexts: [ObjectIdentifier: RouterContext] = [:]
 
@@ -1045,9 +1067,9 @@ coordinatorContexts.removeValue(forKey: ObjectIdentifier(coordinator))
 ```
 
 **Why ObjectIdentifier:**
-- Unique identifier cho coordinator instance
+- Unique identifier for each coordinator instance
 - Lightweight (just a pointer)
-- Works với weak references
+- Works with weak references
 
 ### 4. Common Memory Issues
 
@@ -1100,29 +1122,29 @@ router.push(vc, to: coordinator, onNavigateBack: { [weak self] in
 - **ViewController:** UI rendering, user interactions
 
 **❌ Don't:**
-- ViewController biết về navigation logic
-- ViewModel biết về UIKit hoặc navigation
-- Coordinator chứa business logic
+- ViewControllers knowing about navigation logic
+- ViewModels knowing about UIKit or navigation
+- Coordinators containing business logic
 
 ### 2. When to Use Factories
 
 **Use Factory Pattern when:**
-- ✅ Có nhiều strategies/variants của cùng một flow
-- ✅ Creation logic phức tạp (nhiều delegates, configurations)
-- ✅ Muốn reuse logic ở nhiều nơi
-- ✅ Cần lazy initialization và caching
+- ✅ Multiple strategies/variants of the same flow
+- ✅ Complex creation logic (many delegates, configurations)
+- ✅ Want to reuse logic in multiple places
+- ✅ Need lazy initialization and caching
 
 **Don't Use Factory when:**
-- ❌ Chỉ có 1 simple coordinator creation
-- ❌ Logic quá đơn giản, factory làm phức tạp thêm
-- ❌ Coordinator chỉ dùng 1 lần, không reuse
+- ❌ Only simple coordinator creation
+- ❌ Logic too simple, factory adds complexity
+- ❌ Coordinator used only once, no reuse
 
 ### 3. Delegate vs Closures
 
 **Use Delegate when:**
-- ✅ Có nhiều methods cần communicate (>2-3 methods)
+- ✅ Multiple methods to communicate (>2-3 methods)
 - ✅ Long-lived relationship (coordinator lifetime)
-- ✅ Muốn type-safe protocol
+- ✅ Want type-safe protocol
 
 **Use Closures when:**
 - ✅ Single event (onDismiss, onComplete)
@@ -1163,7 +1185,7 @@ coordinator.delegate = self // Delegate must be weak
 
 **❌ Pitfall 5: Using wrong router**
 ```swift
-// In strategy/factory coordinators với .none presentation
+// In strategy/factory coordinators with .none presentation
 func navigate() {
     router.push(...) // ❌ Wrong - uses child's router
     parentRouter.push(...) // ✅ Correct - uses parent's router
@@ -1200,26 +1222,33 @@ func testShowDetail() {
 
 ## Summary
 
-**Coordinator Architecture trong project này provides:**
+**LCoordinator SDK provides:**
 
-✅ **Clear separation of concerns:** Navigation tách khỏi business logic và UI
-✅ **Flexible navigation:** Support push, modal, bottom sheet, deep linking
-✅ **Reusable patterns:** Factory, Strategy, Plugin patterns cho code reusability
-✅ **Type-safe communication:** Protocols cho coordinator communication
-✅ **Automatic memory management:** Router tự động cleanup coordinators
-✅ **Testability:** Dễ mock và test navigation flows
-✅ **Scalability:** Dễ add new flows và screens
+✅ **Clear separation of concerns:** Navigation separated from business logic and UI
+✅ **Flexible navigation:** Support for push, modal, bottom sheet, and deep linking
+✅ **Reusable patterns:** Factory, Strategy, Plugin patterns for code reusability
+✅ **Type-safe communication:** Protocols for coordinator communication
+✅ **Automatic memory management:** Router automatically cleans up coordinators
+✅ **Testability:** Easy to mock and test navigation flows
+✅ **Scalability:** Easy to add new flows and screens
 
 **Key Takeaways:**
-- Coordinator handles navigation, ViewModel handles logic
-- Use factories để tách complex creation logic
-- Always use weak references cho delegates và parent
+- Coordinators handle navigation, ViewModels handle logic
+- Use factories to separate complex creation logic
+- Always use weak references for delegates and parents
 - Let router handle cleanup automatically
-- Plugins cho embedded components, Strategies cho variants
-- ActiveChildCoordinator cho containers (Tabbar, Segment)
+- Use plugins for embedded components, strategies for variants
+- Use ActiveChildCoordinator for container coordinators (Tabbar, Segment)
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2026-02-12
-**Maintained By:** iOS Team
+## Getting Help
+
+For issues, feature requests, or contributions, visit: [GitHub Repository](https://github.com/97longphan/LCoordinator)
+
+---
+
+**SDK Version:** 1.0.0
+**iOS Minimum:** 14.0+
+**Swift Version:** 5.9+
+**License:** MIT
