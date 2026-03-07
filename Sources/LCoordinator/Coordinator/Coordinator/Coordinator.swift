@@ -261,7 +261,7 @@ extension Coordinator {
 
     /// Returns the most recently added direct child coordinator of the given type.
     /// If multiple coordinators of the same type exist, the last one is returned.
-    func currentChild<T: Coordinator>(ofType type: T.Type) -> T? {
+    public func currentChild<T: Coordinator>(ofType type: T.Type) -> T? {
         children.last(where: { $0 is T }) as? T
     }
 }
