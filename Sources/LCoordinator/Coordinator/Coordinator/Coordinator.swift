@@ -258,4 +258,9 @@ extension Coordinator {
 
         return nil
     }
+
+    /// Find child in current coordinator
+    func child<T: Coordinator>(of type: T.Type) -> T? {
+        children.last(where: { $0 is T }) as? T
+    }
 }
