@@ -88,6 +88,13 @@ public protocol RouterProtocol: AnyObject {
         completion: (() -> Void)?
     )
 
+    /// Dismiss all pan modal bottom sheets in the presentation chain.
+    /// If none are found, completion is called immediately.
+    func dismissAllPanModals(
+        isAnimated: Bool,
+        completion: (() -> Void)?
+    )
+
     func showAlert(
         title: String,
         message: String,
@@ -406,6 +413,65 @@ public extension Router {
             guard let self = self else { return }
 
             // Cleanup all dismissed coordinators
+            for id in dismissedCoordinatorIDs {
+                guard let ctx = self.coordinatorContexts[id] else { continue }
+                ctx.onNavigateBack?()
+                self.coordinatorContexts.removeValue(forKey: id)
+            }
+
+            completion?()
+        }
+    }
+}
+
+// MARK: - Dismiss Pan Modals
+
+public extension Router {
+
+    /// Dismiss all pan modal bottom sheets in the presentation chain.
+    ///
+    /// **Flow:**
+    /// 1. Walk the presentation chain from the navigation controller
+    /// 2. Collect all VCs that conform to `RouterPanModalPresentable`
+    /// 3. Dismiss the bottommost one (UIKit auto-dismisses everything above it)
+    /// 4. Cleanup coordinator contexts for dismissed pan modals
+    /// 5. If no pan modals found, call completion immediately
+    func dismissAllPanModals(
+        isAnimated: Bool,
+        completion: (() -> Void)?
+    ) {
+        // Walk the presentation chain and collect pan modal VCs
+        var panModalVCs: [UIViewController] = []
+        var current = navigationController.presentedViewController
+
+        while let vc = current {
+            if vc is RouterPanModalViewController {
+                panModalVCs.append(vc)
+            }
+            current = vc.presentedViewController
+        }
+
+        // If no pan modals found, call completion immediately
+        guard let bottomMostPanModal = panModalVCs.first else {
+            completion?()
+            return
+        }
+
+        // Use Set for O(1) lookup instead of O(n) array search
+        let panModalVCsSet = Set(panModalVCs)
+
+        // Collect coordinator IDs for all pan modal VCs to dismiss
+        let dismissedCoordinatorIDs = coordinatorContexts
+            .filter { _, ctx in
+                guard let vc = ctx.viewController else { return false }
+                return panModalVCsSet.contains(vc)
+            }
+            .map { $0.key }
+
+        // Dismiss the bottommost pan modal (auto-dismisses any presented above it)
+        bottomMostPanModal.dismiss(animated: isAnimated) { [weak self] in
+            guard let self else { return }
+
             for id in dismissedCoordinatorIDs {
                 guard let ctx = self.coordinatorContexts[id] else { continue }
                 ctx.onNavigateBack?()
