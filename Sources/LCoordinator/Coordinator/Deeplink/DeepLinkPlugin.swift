@@ -14,6 +14,7 @@ public typealias DeeplinkPayload = (
 
 public protocol DeepLinkPlugin {
     var path: String { get }
+    var requireAuthentication: Bool { get }
     func isApplicable(component: DeeplinkPluginComponent) -> Bool
     func buildCoordinator(
         component: DeeplinkPluginComponent,
@@ -23,6 +24,8 @@ public protocol DeepLinkPlugin {
 }
 
 public extension DeepLinkPlugin {
+    var requireAuthentication: Bool { true }
+
     func isApplicable(component: DeeplinkPluginComponent) -> Bool {
         let host = component.url.host?.lowercased()
         let cleanPath = component.url
