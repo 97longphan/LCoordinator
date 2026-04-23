@@ -55,6 +55,7 @@ public final class PanModalNavigationController: UINavigationController, RouterP
     public var onDismissRouter: (() -> Void)?
 
     public func panModalWillDismiss() {
+        (topViewController as? HPanModalPresentable)?.panModalWillDismiss()
         onDismissRouter?()
     }
 
